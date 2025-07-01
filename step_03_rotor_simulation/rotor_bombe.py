@@ -1,41 +1,52 @@
 import string
+from copy import deepcopy
 
-# Simple example rotor with fixed wiring (just a Caesar +1 for now)
-rotor_forward = dict(zip(string.ascii_uppercase, string.ascii_uppercase[1:] + "A"))
-rotor_reverse = {v: k for k, v in rotor_forward.items()}
+class Rotor:
+    def __init__(self, wiring):
+        self.base_wiring = wiring
+        self.position = 0
+        self.letters = list(string.ascii_uppercase)
+        self._update_wiring()
 
-def step_rotor(rotor_map):
-    letters = list(string.ascii_uppercase)
-    stepped = letters[1:] + letters[:1]
-    return dict(zip(letters, stepped))
+    def _update_wiring(self):
+        shifted_letters = self.letters[self.position:] + self.letters[:self.position]
+        self.wiring = dict(zip(self.letters, shifted_letters))
+        self.reverse_wiring = {v: k for k, v in self.wiring.items()}
 
-def encrypt_letter(letter, rotor_map):
-    return rotor_map.get(letter, letter)
+    def step(self):
+        self.position = (self.position + 1) % 26
+        self._update_wiring()
 
-def decrypt_letter(letter, rotor_map):
-    return rotor_map.get(letter, letter)
+    def reset(self):
+        self.position = 0
+        self._update_wiring()
 
-def encrypt_message(message, rotor_map):
-    result = ""
-    for letter in message:
-        result += encrypt_letter(letter, rotor_map)
-        rotor_map = step_rotor(rotor_map)
-    return result
+    def encrypt(self, char):
+        return self.wiring.get(char, char)
 
-def decrypt_message(message, rotor_map):
-    result = ""
-    for letter in message:
-        result += decrypt_letter(letter, rotor_map)
-        rotor_map = step_rotor(rotor_map)
-    return result
+    def decrypt(self, char):
+        return self.reverse_wiring.get(char, char)
 
-# === Test ===
+# === Test with matching stepping ===
 crib = "HELLO"
-rotor = rotor_forward.copy()
 
-encrypted = encrypt_message(crib, rotor.copy())
-print(f"Encrypted with stepping rotor: {encrypted}")
+# Use a Caesar-style rotor (A→B, B→C … Z→A)
+caesar_wiring = dict(zip(string.ascii_uppercase, string.ascii_uppercase[1:] + "A"))
+rotor = Rotor(caesar_wiring)
 
-# Reset rotor for decryption
-decrypted = decrypt_message(encrypted, rotor_reverse.copy())
-print(f"Decrypted back (reversing wiring): {decrypted}")
+# Encrypt
+encrypted = ""
+for letter in crib:
+    encrypted += rotor.encrypt(letter)
+    rotor.step()
+
+print(f"Encrypted: {encrypted}")
+
+# Decrypt
+rotor.reset()
+decrypted = ""
+for letter in encrypted:
+    decrypted += rotor.decrypt(letter)
+    rotor.step()
+
+print(f"Decrypted: {decrypted}")
